@@ -11,7 +11,7 @@ A Django web app for discovering and filtering San Francisco's parks.
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.10+ but prefer higher
 
 ## Setup
 
