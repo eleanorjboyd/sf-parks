@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Parks — SF Parks Explorer{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6">
+  <!-- Search Bar -->
+  <form method="get" action="{% url 'parks:park_list' %}" class="relative">
+    {% for slug in selected_slugs %}
+    <input type="hidden" name="categories" value="{{ slug }}">
+    {% endfor %}
+    <div class="flex items-center bg-bark-100 border-2 border-bark-300 rounded-sm shadow-md overflow-hidden">
+      <span class="pl-4 text-bark-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </span>
+      <input
+        type="text"
+        name="q"
+        value="{{ search_query }}"
+        placeholder="Search parks by name..."
+        class="flex-1 bg-transparent px-4 py-3 text-bark-800 font-body placeholder-bark-400 focus:outline-none"
+      >
+      <button type="submit" class="bg-forest-700 hover:bg-forest-800 text-bark-100 text-sm font-display font-bold py-3 px-6 uppercase tracking-widest transition">
+        Search
+      </button>
+    </div>
+  </form>
+
+  <!-- Filter Bar -->
+  <form method="get" action="{% url 'parks:park_list' %}">
+    {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+    <div class="bg-bark-100 border-2 border-bark-300 rounded-sm shadow-md">
+      <button
+        type="button"
+        onclick="const content = document.getElementById('filter-content'); const arrow = document.getElementById('filter-arrow'); content.classList.toggle('hidden'); arrow.classList.toggle('rotate-180');"
+        class="w-full px-6 py-4 flex items-center justify-between cursor-pointer"
+      >
+        <div class="flex items-center gap-2">
+          <span class="text-lg">🧭</span>
+          <h2 class="font-display text-lg font-bold text-forest-800 uppercase tracking-wider">Trail Guide</h2>
+          <span class="text-xs text-bark-500 italic font-body ml-2">Filter parks by amenity</span>
+        </div>
+        <svg id="filter-arrow" class="w-5 h-5 text-forest-700 transition-transform duration-300{% if not selected_slugs %} rotate-180{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+        </svg>
+      </button>
+      <div id="filter-content" class="px-6 pb-4{% if not selected_slugs %} hidden{% endif %}">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-bark-300 pt-4">
+          {% for category in categories %}
+          <label class="flex items-center gap-2 cursor-pointer group">
+            <input
+              type="checkbox"
+              name="categories"
+              value="{{ category.slug }}"
+              {% if category.slug in selected_slugs %}checked{% endif %}
+              class="rounded-sm border-bark-400 text-forest-600 focus:ring-forest-500 w-4 h-4"
+            >
+            <span class="text-sm text-bark-800 group-hover:text-forest-700 transition font-body">{{ category.name }}</span>
+          </label>
+          {% endfor %}
+          <button
+            type="submit"
+            class="ml-auto bg-forest-700 hover:bg-forest-800 text-bark-100 text-sm font-display font-bold py-2 px-6 rounded-sm uppercase tracking-widest transition shadow"
+          >
+            Apply Filters
+          </button>
+          {% if selected_slugs %}
+          <a
+            href="{% url 'parks:park_list' %}"
+            class="text-xs text-bark-500 hover:text-forest-700 uppercase tracking-wider font-body"
+          >
+            Clear all
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Park Cards Grid -->
+  <section>
+    <div class="flex items-end justify-between mb-6 border-b-2 border-bark-300 pb-3">
+      <h1 class="font-display text-3xl font-black text-forest-800 uppercase tracking-wide">
+        {% if selected_slugs %}Filtered Parks{% else %}All Parks{% endif %}
+      </h1>
+      <span class="text-sm text-bark-500 font-body italic">{{ parks|length }} park{{ parks|length|pluralize }}</span>
+    </div>
+
+    {% if parks %}
+    <div id="park-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for park in parks %}
+      <div class="park-card group relative" data-park-id="{{ park.pk }}" data-href="{% url 'parks:park_detail' park.pk %}">
+      <div class="drag-handle absolute top-2 left-2 z-30 bg-bark-100/90 rounded-sm px-2.5 py-1.5 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity duration-200 border border-bark-300 shadow-sm">
+        <span class="text-bark-600 text-sm font-body select-none">&#x2630;</span>
+      </div>
+      <div class="card-link cursor-pointer bg-bark-100 border-2 border-bark-200 rounded-sm shadow hover:shadow-lg hover:border-forest-400 transition overflow-hidden h-full flex flex-col">
+          {% if park.image or park.image_url %}
+          <div class="relative">
+            <img
+              src="{% if park.image %}/imgs/{{ park.image }}{% else %}{{ park.image_url }}{% endif %}"
+              alt="{{ park.name }}"
+              class="h-44 w-full object-cover sepia-[.15] group-hover:sepia-0 transition duration-500"
+              loading="lazy"
+            >
+            <div class="absolute inset-0 bg-gradient-to-t from-bark-900/30 to-transparent"></div>
+            <div class="absolute inset-0 bg-forest-900/80 flex items-center justify-center p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <p class="text-bark-100 text-sm font-body text-center leading-relaxed">{{ park.description }}</p>
+            </div>
+          </div>
+          {% else %}
+          <div class="h-44 w-full bg-forest-100 flex items-center justify-center text-5xl">🌲</div>
+          {% endif %}
+          <div class="p-4 flex flex-col flex-1">
+            <h3 class="font-display font-bold text-forest-800 group-hover:text-forest-600 transition uppercase text-sm tracking-wider leading-snug">
+              {{ park.name }}
+            </h3>
+            <p class="text-sm text-bark-600 mt-2 line-clamp-2 flex-1 font-body leading-relaxed">{{ park.description }}</p>
+            <div class="flex flex-wrap gap-1.5 mt-3">
+              {% for cat in park.categories.all %}
+              <span class="inline-block bg-forest-50 text-forest-700 text-[10px] px-2 py-0.5 rounded-sm border border-forest-200 uppercase tracking-wider font-body">
+                {{ cat.name }}
+              </span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        var grid = document.getElementById('park-grid');
+        if (!grid) return;
+
+        var isDragging = false;
+
+        Sortable.create(grid, {
+          animation: 200,
+          handle: '.drag-handle',
+          ghostClass: 'opacity-40',
+          chosenClass: 'ring-forest-500',
+          dragClass: 'shadow-2xl',
+          onStart: function() { isDragging = true; },
+          onEnd: function() { setTimeout(function() { isDragging = false; }, 100); }
+        });
+
+        grid.addEventListener('click', function(e) {
+          if (isDragging) return;
+          if (e.target.closest('.drag-handle')) return;
+          var card = e.target.closest('.park-card');
+          if (card && card.dataset.href) {
+            window.location.href = card.dataset.href;
+          }
+        });
+      });
+    </script>
+    {% else %}
+    <div class="text-center py-16 text-bark-400">
+      <p class="text-lg font-display italic">No parks match your trail guide.</p>
+      <a href="{% url 'parks:park_list' %}" class="text-forest-600 hover:underline mt-2 inline-block font-body">
+        Clear filters
+      </a>
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+<!-- Welcome Modal -->
+<div id="welcome-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+  <div class="absolute inset-0 bg-forest-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
+  <div class="relative bg-bark-50 border-2 border-bark-300 rounded-sm shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+    <!-- Step 1: Favorite Park -->
+    <div id="modal-step-1">
+      <div class="bg-forest-700 px-6 py-4">
+        <h2 class="font-display text-xl font-bold text-bark-100 uppercase tracking-wider">🌲 Welcome, Explorer!</h2>
+        <p class="text-bark-200 text-sm font-body mt-1">Let's personalize your trail</p>
+      </div>
+      <div class="p-6">
+        <label class="block font-display text-sm font-bold text-forest-800 uppercase tracking-wider mb-3">
+          What's your favorite park?
+        </label>
+        <input
+          id="modal-park-search"
+          type="text"
+          placeholder="Start typing a park name..."
+          autocomplete="off"
+          class="w-full border-2 border-bark-300 rounded-sm px-4 py-3 text-bark-800 font-body placeholder-bark-400 focus:outline-none focus:border-forest-500 bg-white"
+        >
+        <div class="mt-4 flex justify-end">
+          <button onclick="goToStep2()" class="bg-forest-700 hover:bg-forest-800 text-bark-100 text-sm font-display font-bold py-2.5 px-6 rounded-sm uppercase tracking-widest transition shadow">
+            Next →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Filter Selection -->
+    <div id="modal-step-2" class="hidden">
+      <div class="bg-forest-700 px-6 py-4">
+        <h2 class="font-display text-xl font-bold text-bark-100 uppercase tracking-wider">🧭 Pick Your Trail</h2>
+        <p class="text-bark-200 text-sm font-body mt-1">What amenities matter to you?</p>
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-2 gap-3">
+          {% for category in categories %}
+          <label class="flex items-center gap-2 cursor-pointer group p-2 rounded-sm hover:bg-bark-100 transition">
+            <input
+              type="checkbox"
+              value="{{ category.slug }}"
+              class="modal-filter-cb rounded-sm border-bark-400 text-forest-600 focus:ring-forest-500 w-4 h-4"
+            >
+            <span class="text-sm text-bark-800 group-hover:text-forest-700 transition font-body">{{ category.name }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        <div class="mt-5 flex justify-between items-center">
+          <button onclick="goToStep1()" class="text-sm text-bark-500 hover:text-forest-700 font-body uppercase tracking-wider">
+            ← Back
+          </button>
+          <button onclick="applyModalFilters()" class="bg-forest-700 hover:bg-forest-800 text-bark-100 text-sm font-display font-bold py-2.5 px-6 rounded-sm uppercase tracking-widest transition shadow">
+            Explore Parks!
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showModal() {
+    document.getElementById('welcome-modal').classList.remove('hidden');
+  }
+  function closeModal() {
+    document.getElementById('welcome-modal').classList.add('hidden');
+    sessionStorage.setItem('sf-parks-welcomed', '1');
+  }
+  function goToStep2() {
+    document.getElementById('modal-step-1').classList.add('hidden');
+    document.getElementById('modal-step-2').classList.remove('hidden');
+  }
+  function goToStep1() {
+    document.getElementById('modal-step-2').classList.add('hidden');
+    document.getElementById('modal-step-1').classList.remove('hidden');
+  }
+  function applyModalFilters() {
+    var parkName = document.getElementById('modal-park-search').value.trim();
+    var checked = document.querySelectorAll('.modal-filter-cb:checked');
+    var params = new URLSearchParams();
+    if (parkName) params.set('q', parkName);
+    checked.forEach(function(cb) { params.append('categories', cb.value); });
+    sessionStorage.setItem('sf-parks-welcomed', '1');
+    window.location.href = '{% url "parks:park_list" %}' + (params.toString() ? '?' + params.toString() : '');
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    if (!sessionStorage.getItem('sf-parks-welcomed') && !window.location.search) {
+      showModal();
+    }
+  });
+</script>
+{% endblock %}

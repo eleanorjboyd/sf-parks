@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}SF Parks Explorer{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bark: { 50: '#faf6f1', 100: '#f0e6d6', 200: '#e0ccad', 300: '#ccab7d', 400: '#b8894d', 500: '#8b6914', 600: '#6b4f10', 700: '#4a370b', 800: '#3a2a08', 900: '#2a1e06' },
+            forest: { 50: '#f0f4e8', 100: '#dde6cc', 200: '#b8cc8f', 300: '#8aad4e', 400: '#5c7a2e', 500: '#3d5a1e', 600: '#2d4215', 700: '#1e2e0e', 800: '#1a2610', 900: '#111a09' },
+            ranger: { 50: '#fdf8f0', 100: '#f7ebda', 200: '#edd5b2', 300: '#dfb880', 400: '#c9924a', 500: '#a0702e', 600: '#7a5522', 700: '#553b18', 800: '#3d2b12', 900: '#2b1e0d' },
+          },
+          fontFamily: {
+            display: ['Playfair Display', 'serif'],
+            body: ['Source Serif 4', 'Georgia', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Source Serif 4', Georgia, serif; }
+    .texture-bg { background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-bark-50 texture-bg min-h-screen flex flex-col text-bark-900">
+
+  <!-- Top accent stripe -->
+  <div class="h-1.5 bg-gradient-to-r from-forest-700 via-forest-500 to-forest-700"></div>
+
+  <nav class="bg-forest-800 text-bark-100 shadow-lg border-b-4 border-ranger-500">
+    <div class="max-w-7xl mx-auto px-4 py-5 flex items-center justify-between">
+      <a href="{% url 'parks:park_list' %}" class="flex items-center gap-3 group">
+        <!-- Badge emblem -->
+        <div class="w-12 h-12 rounded-full border-2 border-ranger-400 bg-forest-700 flex items-center justify-center text-xl shadow-inner group-hover:border-ranger-300 transition">
+          🌲
+        </div>
+        <div>
+          <div class="font-display text-2xl font-black tracking-wide uppercase leading-tight">
+            SF Parks
+          </div>
+          <div class="text-xs tracking-[0.25em] uppercase text-ranger-300 font-body">
+            Explorer &bull; Est. 2026
+          </div>
+        </div>
+      </a>
+      <div class="hidden sm:block text-sm text-bark-200 font-body italic">
+        &ldquo;Discover the wild heart of San Francisco&rdquo;
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-1 max-w-7xl mx-auto px-4 py-10 w-full">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="bg-forest-900 text-bark-300 text-center py-6 text-sm font-body border-t-4 border-ranger-600">
+    <div class="font-display text-base tracking-widest uppercase mb-1">SF Parks Explorer</div>
+    <div class="text-bark-400 text-xs tracking-wider">Protect &bull; Explore &bull; Enjoy</div>
+  </footer>
+
+  <!-- Bottom accent stripe -->
+  <div class="h-1.5 bg-gradient-to-r from-ranger-700 via-ranger-500 to-ranger-700"></div>
+</body>
+</html>

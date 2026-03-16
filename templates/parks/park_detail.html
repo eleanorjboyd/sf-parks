@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}{{ park.name }} — SF Parks Explorer{% endblock %}
+
+{% block extra_head %}
+{% if park.latitude and park.longitude %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="{% url 'parks:park_list' %}" class="text-forest-700 hover:text-forest-900 text-sm font-body uppercase tracking-wider">
+    &larr; Back to all parks
+  </a>
+</div>
+
+<div class="bg-bark-100 border-2 border-bark-200 rounded-sm shadow-lg overflow-hidden">
+  {% if park.image or park.image_url %}
+  <div class="relative">
+    <img
+      src="{% if park.image %}/imgs/{{ park.image }}{% else %}{{ park.image_url }}{% endif %}"
+      alt="{{ park.name }}"
+      class="w-full h-64 md:h-96 object-cover sepia-[.1]"
+    >
+    <div class="absolute inset-0 bg-gradient-to-t from-bark-900/50 to-transparent"></div>
+    <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+      <h1 class="font-display text-3xl md:text-4xl font-black text-bark-50 uppercase tracking-wider drop-shadow-lg">{{ park.name }}</h1>
+    </div>
+  </div>
+  {% else %}
+  <div class="relative w-full h-64 md:h-96 bg-forest-100 flex items-center justify-center text-7xl">
+    🌲
+    <div class="absolute bottom-0 left-0 right-0 p-6 md:p-8 bg-gradient-to-t from-forest-900/40 to-transparent">
+      <h1 class="font-display text-3xl md:text-4xl font-black text-bark-50 uppercase tracking-wider drop-shadow-lg">{{ park.name }}</h1>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="p-6 md:p-10">
+    {% if not park.image_url %}{% else %}{% endif %}
+
+    {% if park.address %}
+    <p class="text-bark-600 mb-5 font-body flex items-center gap-2">
+      <span class="text-ranger-500">&#9679;</span> {{ park.address }}
+    </p>
+    {% endif %}
+
+    <!-- Category Tags -->
+    <div class="flex flex-wrap gap-2 mb-8">
+      {% for cat in park.categories.all %}
+      <span class="inline-block bg-forest-50 text-forest-700 text-xs px-3 py-1 rounded-sm border border-forest-200 font-display font-bold uppercase tracking-widest">
+        {{ cat.name }}
+      </span>
+      {% endfor %}
+    </div>
+
+    {% if park.description %}
+    <div class="max-w-none text-bark-700 mb-10 font-body text-lg leading-relaxed border-l-4 border-ranger-400 pl-6 italic">
+      <p>{{ park.description }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Map Embed -->
+    {% if park.latitude and park.longitude %}
+    <div class="rounded-sm overflow-hidden border-2 border-bark-300">
+      <h2 class="font-display text-base font-bold text-forest-800 p-4 bg-bark-200 uppercase tracking-widest flex items-center gap-2">
+        <span>🗺</span> Location
+      </h2>
+      <div
+        id="map"
+        class="w-full"
+        style="height: 350px;"
+        data-lat="{{ park.latitude }}"
+        data-lng="{{ park.longitude }}"
+        data-name="{{ park.name }}"
+      ></div>
+      <script>
+        (function() {
+          var el = document.getElementById('map');
+          var lat = parseFloat(el.dataset.lat);
+          var lng = parseFloat(el.dataset.lng);
+          var name = el.dataset.name;
+          var map = L.map('map').setView([lat, lng], 15);
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '\u00a9 OpenStreetMap contributors'
+          }).addTo(map);
+          L.marker([lat, lng]).addTo(map).bindPopup(name).openPopup();
+        })();
+      </script>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
