@@ -70,5 +70,26 @@
 
   <!-- Bottom accent stripe -->
   <div class="h-1.5 bg-gradient-to-r from-ranger-700 via-ranger-500 to-ranger-700"></div>
+  {% block extra_foot %}{% endblock %}
+
+  <script>
+    // Shared visited-parks localStorage utility
+    const SF_VISITED_KEY = 'sf-parks-visited';
+    const visitedParks = {
+      getAll() {
+        try { return JSON.parse(localStorage.getItem(SF_VISITED_KEY)) || []; }
+        catch(e) { console.error('sf-parks: could not read visited parks', e); return []; }
+      },
+      setAll(ids) { localStorage.setItem(SF_VISITED_KEY, JSON.stringify(ids)); },
+      has(id) { return this.getAll().indexOf(String(id)) !== -1; },
+      toggle(id) {
+        const ids = this.getAll();
+        const idx = ids.indexOf(String(id));
+        if (idx === -1) { ids.push(String(id)); } else { ids.splice(idx, 1); }
+        this.setAll(ids);
+      },
+      clear() { this.setAll([]); },
+    };
+  </script>
 </body>
 </html>

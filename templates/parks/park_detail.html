@@ -10,10 +10,19 @@
 {% endblock %}
 
 {% block content %}
-<div class="mb-6">
+<div class="mb-6 flex items-center justify-between">
   <a href="{% url 'parks:park_list' %}" class="text-forest-700 hover:text-forest-900 text-sm font-body uppercase tracking-wider">
     &larr; Back to all parks
   </a>
+  <button
+    type="button"
+    id="visited-btn"
+    data-park-id="{{ park.pk }}"
+    class="flex items-center gap-2 text-sm font-display font-bold uppercase tracking-wider py-2 px-4 rounded-sm border-2 transition"
+  >
+    <span id="visited-btn-icon">☐</span>
+    <span id="visited-btn-label">Mark as Visited</span>
+  </button>
 </div>
 
 <div class="bg-bark-100 border-2 border-bark-200 rounded-sm shadow-lg overflow-hidden">
@@ -93,4 +102,37 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_foot %}
+<script>
+  (function() {
+    const btn = document.getElementById('visited-btn');
+    if (!btn) return;
+    const parkId = String(btn.dataset.parkId);
+    const icon = document.getElementById('visited-btn-icon');
+    const label = document.getElementById('visited-btn-label');
+
+    function updateBtn() {
+      if (visitedParks.has(parkId)) {
+        icon.textContent = '✅';
+        label.textContent = 'Visited!';
+        btn.classList.remove('border-bark-300', 'text-bark-600', 'hover:border-forest-400', 'hover:text-forest-700');
+        btn.classList.add('border-forest-500', 'text-forest-700', 'bg-forest-50');
+      } else {
+        icon.textContent = '☐';
+        label.textContent = 'Mark as Visited';
+        btn.classList.remove('border-forest-500', 'text-forest-700', 'bg-forest-50');
+        btn.classList.add('border-bark-300', 'text-bark-600', 'hover:border-forest-400', 'hover:text-forest-700');
+      }
+    }
+
+    btn.addEventListener('click', function() {
+      visitedParks.toggle(parkId);
+      updateBtn();
+    });
+
+    updateBtn();
+  })();
+</script>
 {% endblock %}

@@ -26,6 +26,32 @@
     </div>
   </form>
 
+  <!-- Visited Filter Bar -->
+  <div class="bg-bark-100 border-2 border-bark-300 rounded-sm shadow-md px-6 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-2">
+      <span class="text-lg">✅</span>
+      <h2 class="font-display text-lg font-bold text-forest-800 uppercase tracking-wider">My Trail Log</h2>
+      <span id="visited-count-badge" class="text-xs text-bark-500 italic font-body ml-2">0 parks visited</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <label class="flex items-center gap-2 cursor-pointer group">
+        <input
+          type="checkbox"
+          id="show-visited-only"
+          class="rounded-sm border-bark-400 text-forest-600 focus:ring-forest-500 w-4 h-4"
+        >
+        <span class="text-sm text-bark-800 group-hover:text-forest-700 transition font-body">Show only visited</span>
+      </label>
+      <button
+        type="button"
+        id="clear-visited-btn"
+        class="text-xs text-bark-500 hover:text-forest-700 uppercase tracking-wider font-body"
+      >
+        Clear all
+      </button>
+    </div>
+  </div>
+
   <!-- Filter Bar -->
   <form method="get" action="{% url 'parks:park_list' %}">
     {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
@@ -93,6 +119,15 @@
       <div class="drag-handle absolute top-2 left-2 z-30 bg-bark-100/90 rounded-sm px-2.5 py-1.5 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity duration-200 border border-bark-300 shadow-sm">
         <span class="text-bark-600 text-sm font-body select-none">&#x2630;</span>
       </div>
+      <button
+        type="button"
+        class="visited-toggle absolute top-2 right-2 z-30 bg-bark-100/90 rounded-sm px-2 py-1 border border-bark-300 shadow-sm text-sm transition-all duration-200 hover:bg-forest-50 hover:border-forest-400"
+        data-park-id="{{ park.pk }}"
+        aria-label="Mark as visited"
+        title="Mark as visited"
+      >
+        <span class="visited-icon">☐</span>
+      </button>
       <div class="card-link cursor-pointer bg-bark-100 border-2 border-bark-200 rounded-sm shadow hover:shadow-lg hover:border-forest-400 transition overflow-hidden h-full flex flex-col">
           {% if park.image or park.image_url %}
           <div class="relative">
@@ -129,10 +164,65 @@
     </div>
     <script>
       document.addEventListener('DOMContentLoaded', function() {
-        var grid = document.getElementById('park-grid');
+        function updateVisitedUI() {
+          const visited = visitedParks.getAll();
+          const badge = document.getElementById('visited-count-badge');
+          if (badge) badge.textContent = visited.length + ' park' + (visited.length !== 1 ? 's' : '') + ' visited';
+
+          document.querySelectorAll('.visited-toggle').forEach(function(btn) {
+            const id = String(btn.dataset.parkId);
+            const icon = btn.querySelector('.visited-icon');
+            if (visitedParks.has(id)) {
+              icon.textContent = '✅';
+              btn.title = 'Visited! Click to unmark';
+              btn.classList.add('border-forest-400', 'bg-forest-50');
+            } else {
+              icon.textContent = '☐';
+              btn.title = 'Mark as visited';
+              btn.classList.remove('border-forest-400', 'bg-forest-50');
+            }
+          });
+
+          // Apply show-visited-only filter
+          const showOnly = document.getElementById('show-visited-only');
+          document.querySelectorAll('.park-card').forEach(function(card) {
+            const id = String(card.dataset.parkId);
+            card.style.display = (showOnly && showOnly.checked && !visitedParks.has(id)) ? 'none' : '';
+          });
+        }
+
+        // Visited toggles
+        document.querySelectorAll('.visited-toggle').forEach(function(btn) {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            visitedParks.toggle(btn.dataset.parkId);
+            updateVisitedUI();
+          });
+        });
+
+        // Show visited only filter
+        const showOnly = document.getElementById('show-visited-only');
+        if (showOnly) {
+          showOnly.addEventListener('change', updateVisitedUI);
+        }
+
+        // Clear all visited
+        const clearBtn = document.getElementById('clear-visited-btn');
+        if (clearBtn) {
+          clearBtn.addEventListener('click', function() {
+            visitedParks.clear();
+            if (showOnly) showOnly.checked = false;
+            updateVisitedUI();
+          });
+        }
+
+        updateVisitedUI();
+
+        // --- Drag to reorder ---
+        const grid = document.getElementById('park-grid');
         if (!grid) return;
 
-        var isDragging = false;
+        let isDragging = false;
 
         Sortable.create(grid, {
           animation: 200,
@@ -147,7 +237,8 @@
         grid.addEventListener('click', function(e) {
           if (isDragging) return;
           if (e.target.closest('.drag-handle')) return;
-          var card = e.target.closest('.park-card');
+          if (e.target.closest('.visited-toggle')) return;
+          const card = e.target.closest('.park-card');
           if (card && card.dataset.href) {
             window.location.href = card.dataset.href;
           }
