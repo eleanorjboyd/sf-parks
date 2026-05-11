@@ -2,6 +2,25 @@
 
 A Django web app for discovering and filtering San Francisco's parks.
 
+## Repo Layout: Two Projects, Two Environments
+
+This workspace is a Django app (`sf-parks`) with a nested utility project, each with its own Python environment:
+
+| Project | Location | Virtual env | Purpose | Dependencies |
+| --- | --- | --- | --- | --- |
+| **Root project** | workspace root | root-level `.venv` | The Django site itself — `parks/`, `sf_parks/`, `templates/`, `manage.py`, and the SQLite DB. | App runtime deps (Django, etc.) |
+| **`scripts/` sub-project** | `scripts/` | `scripts/`-level venv | One-off tooling (e.g. [`fetch_park_images.py`](scripts/fetch_park_images.py)). | Script-only deps (HTTP clients, image libs, etc.) — intentionally *not* part of the Django app's dependency graph. |
+
+**Why two environments?** Keeping them separate keeps the web app's runtime deps lean and prevents ad-hoc scripting tools from polluting it (and vice versa).
+
+**How it stays ergonomic in one window.** The **Python Environments extension** makes this seamless:
+
+- It detects both environments automatically.
+- It binds the right interpreter to each folder/file.
+- It clearly shows which env is active for whichever file we're editing.
+
+So running `manage.py` uses the root venv, and running `scripts/fetch_park_images.py` uses the scripts venv — automatically.
+
 ## Features
 
 - Browse 50 San Francisco parks with photos, descriptions, and category tags
