@@ -14,6 +14,12 @@ import urllib.request
 import urllib.parse
 import json
 
+from rich.console import Console
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.table import Table
+
+console = Console()
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 IMGS_DIR = os.path.join(PROJECT_ROOT, "imgs")
@@ -98,10 +104,11 @@ def api_request(params):
         except urllib.error.HTTPError as e:
             if e.code == 429 and attempt < MAX_RETRIES - 1:
                 wait = BASE_DELAY * (2 ** (attempt + 1))
-                print(f"  Rate limited (429), retrying in {wait}s...")
+                console.print(f"  [yellow]Rate limited (429), retrying in {wait}s...[/yellow]")
                 time.sleep(wait)
             else:
                 raise
+    raise RuntimeError("Exhausted retries without response")
 
 
 def get_page_image_url(title):
@@ -169,7 +176,7 @@ def download_image(url, dest_path):
         except urllib.error.HTTPError as e:
             if e.code == 429 and attempt < MAX_RETRIES - 1:
                 wait = BASE_DELAY * (2 ** (attempt + 1))
-                print(f"  Rate limited (429), retrying in {wait}s...")
+                console.print(f"  [yellow]Rate limited (429), retrying in {wait}s...[/yellow]")
                 time.sleep(wait)
             else:
                 raise
@@ -181,59 +188,84 @@ def main():
     success = 0
     failed = []
 
-    for title in PARKS:
-        slug = title_to_filename(title)
-        print(f"Fetching image for: {title} ...")
+    progress = Progress(
+        SpinnerColumn(),
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TextColumn("({task.completed}/{task.total})"),
+        TimeElapsedColumn(),
+        console=console,
+    )
 
-        # Check if any image with this slug already exists (any extension)
-        existing = glob.glob(os.path.join(IMGS_DIR, slug + ".*"))
-        if existing:
-            print(f"  Already exists: {existing[0]}")
-            success += 1
-            continue
+    with progress:
+        task = progress.add_task("Fetching parks...", total=len(PARKS))
 
-        try:
-            url = get_page_image_url(title)
-        except Exception as e:
-            print(f"  ERROR fetching metadata: {e}")
-            failed.append((title, str(e)))
+        for title in PARKS:
+            slug = title_to_filename(title)
+            progress.update(task, description=f"Fetching: {title}")
+
+            # Check if any image with this slug already exists (any extension)
+            existing = glob.glob(os.path.join(IMGS_DIR, slug + ".*"))
+            if existing:
+                console.print(f"  [dim yellow]Already exists:[/dim yellow] {existing[0]}")
+                success += 1
+                progress.advance(task)
+                continue
+
+            try:
+                url = get_page_image_url(title)
+            except (urllib.error.URLError, OSError, json.JSONDecodeError, RuntimeError) as e:
+                console.print(f"  [red]ERROR fetching metadata:[/red] {e}")
+                failed.append((title, str(e)))
+                time.sleep(BASE_DELAY)
+                progress.advance(task)
+                continue
+
+            if not url:
+                console.print(f"  [yellow]No image found on Wikipedia[/yellow] for {title}")
+                failed.append((title, "no image found"))
+                time.sleep(BASE_DELAY)
+                progress.advance(task)
+                continue
+
+            # Determine file extension from URL
+            parsed = urllib.parse.urlparse(url)
+            path_lower = parsed.path.lower()
+            if ".png" in path_lower:
+                ext = ".png"
+            elif ".jpeg" in path_lower:
+                ext = ".jpeg"
+            else:
+                ext = ".jpg"
+
+            dest = os.path.join(IMGS_DIR, slug + ext)
+
+            try:
+                download_image(url, dest)
+                console.print(f"  [green]Saved[/green] {title} -> {dest}")
+                success += 1
+            except (urllib.error.URLError, OSError) as e:
+                console.print(f"  [red]ERROR downloading:[/red] {e}")
+                failed.append((title, str(e)))
+
+            # Delay between requests to avoid rate limiting
             time.sleep(BASE_DELAY)
-            continue
+            progress.advance(task)
 
-        if not url:
-            print("  No image found on Wikipedia")
-            failed.append((title, "no image found"))
-            time.sleep(BASE_DELAY)
-            continue
+    console.rule("[bold]Summary")
+    console.print(
+        f"[green]{success} images downloaded[/green], "
+        f"[red]{len(failed)} failed[/red]."
+    )
 
-        # Determine file extension from URL
-        parsed = urllib.parse.urlparse(url)
-        path_lower = parsed.path.lower()
-        if ".png" in path_lower:
-            ext = ".png"
-        elif ".jpeg" in path_lower:
-            ext = ".jpeg"
-        else:
-            ext = ".jpg"
-
-        dest = os.path.join(IMGS_DIR, slug + ext)
-
-        try:
-            download_image(url, dest)
-            print(f"  Saved to {dest}")
-            success += 1
-        except Exception as e:
-            print(f"  ERROR downloading: {e}")
-            failed.append((title, str(e)))
-
-        # Delay between requests to avoid rate limiting
-        time.sleep(BASE_DELAY)
-
-    print(f"\nDone! {success} images downloaded, {len(failed)} failed.")
     if failed:
-        print("\nFailed parks:")
+        table = Table(title="Failed Parks", show_lines=False)
+        table.add_column("Park", style="cyan", no_wrap=True)
+        table.add_column("Reason", style="red")
         for name, reason in failed:
-            print(f"  - {name}: {reason}")
+            table.add_row(name, reason)
+        console.print(table)
 
 
 if __name__ == "__main__":
